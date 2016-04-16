@@ -1,0 +1,99 @@
+---
+title: "Gapminder Analysis with dplyr"
+author: "Susan Meerdink"
+date: "April 16, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load dplyr package
+
+```{r LoadDplyr}
+#install.packages("dplyr") #Installing dplyr package (do only once)
+library(dplyr) #Provides additional information about library and loads
+#Do the above command everytime you restart R and need dplyr
+```
+
+## Load and explore gapminder dataset
+
+```{r LoadDataset}
+#install.packages("gapminder") #Install Library
+library(gapminder) #Load Library
+str(gapminder) #Compactly Display the Structure of an Arbitrary R Object
+
+```
+```{r Subset}
+#Using dplyr's filter function
+filter(gapminder, lifeExp < 29)
+filter(gapminder, country == "Rwanda")
+filter(gapminder, country %in% c("Rwanda", "Afghanistan"))
+
+#Using base R subset
+gapminder[gapminder$lifeExp < 29, ] 
+subset(gapminder, country == "Rwanda") ## almost same as filter ... but wait ...
+```
+```{r pipline}
+#the pipeline operator!%>% 
+#comes from the magrittr package
+gapminder %>% head #pipeline way
+head (gapminder) #same as above 
+
+gapminder %>% head(3) #pipeline way
+head(gapminder,3) #Old way
+
+#subset with select()
+select(gapminder,year,lifeExp) #great, but... can also do with pipline operator
+gapminder %>% select(year,lifeExp) #same as above
+#take whatever is on the left of the %>%  and passes it to whatever is on the right, as the first argument
+
+#Cool Example
+#WITH PIPELINE
+gapminder %>%
+  filter(country == "Cambodia") %>%
+  select(-continent, -lifeExp) # you can use - to deselect columns
+# select(country, year, pop, gdpPercap) ## entering 4 of the 6 columns is tedious
+
+#WITHOUT PIPELINE (Two Options)
+gapminder[gapminder$country == "Cambodia", 
+          c("country", "year", "pop", "gdpPercap")]
+subset(gapminder, country == "Cambodia", 
+       select = c(country, year, pop, gdpPercap))
+```
+```{r mutate}
+gapminder %>% 
+  mutate(gdp = pop * gdpPercap)
+  #makes a new variable and we are assigning the values to that new variable
+
+# Exercise
+#add mutate to our previous analysis
+#What is the gdp of Cambodia for each year in our dataset?
+gapminder %>%
+  filter(country == "Cambodia") %>% #Pull out Cambodia
+  select(-continent, -lifeExp)  %>%  #Get rid of continent and lifeExp column
+  mutate(gdp = pop * gdpPercap) #Now add gdp column
+
+```
+```{r GroupBy}
+#Using pipeline 
+#Just for Cambodia
+gapminder %>%
+  filter(country == "Cambodia") %>% #Pull out Cambodia
+  select(-continent, -lifeExp)  %>%  #Get rid of continent and lifeExp column
+  mutate(gdp = pop * gdpPercap) %>% #Now add gdp column
+  group_by(country) %>% #Combines into group based on country
+  summarise(mean_gdp = mean(gdp)) %>% #Summarise multiple values to a single value
+  ungroup() #Always ungroup if you group_by!
+
+#For all countries
+gapminder %>%
+  select(-continent, -lifeExp)  %>%  #Get rid of continent and lifeExp column
+  mutate(gdp = pop * gdpPercap) %>% #Now add gdp column
+  group_by(country) %>% #Combines into group based on country (like a for loop)
+  summarise(mean_gdp = mean(gdp)) %>% #Summarise multiple values to a single value
+  ungroup() #Always ungroup if you group_by!
+```
+
+

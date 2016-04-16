@@ -1,0 +1,163 @@
+---
+title: "Viz"
+author: "Susan Meerdink"
+date: "April 16, 2016"
+output: html_document
+---
+
+```{r Loading, results='hide',message=FALSE,warning=FALSE}
+#Load Libraries
+library(dplyr)
+library(ggplot2)
+library(gapminder)
+
+gapminder # preview data (looks the way it does because of dplyr library)
+summary(gapminder) # get range of available data
+
+# setup dataframe
+g = gapminder %>%
+  filter(year==2007) %>%   # most recent year 
+  mutate(pop_m = pop/1e6)  # population, millions
+```
+
+## PLOTS
+## Static 
+##ScatterPlot
+```{r scatterplot}
+# plot scatterplot of most recent year 
+s = ggplot(g, aes(x=gdpPercap, y=lifeExp)) + 
+  geom_point()
+s
+
+
+# add aesthetic of size by population
+s = s + 
+  aes(size=pop_m)
+s
+
+# add aesthetic of color by continent
+s = s + 
+  aes(color=continent)
+s
+
+# add title, update axes labels
+s = s + 
+  ggtitle('Health & Wealth of Nations for 2007') +
+  xlab('GDP per capita ($/year)') +
+  ylab('Life expectancy (years)')
+s
+
+# label legend
+s = s + 
+  scale_colour_discrete(name='Continent') +
+  scale_size_continuous(name='Population (M)')
+s
+
+ggsave('hans.png') #Defaults to last image and saves the image
+```
+
+```{r boxplot}
+# boxplot by continent
+b = ggplot(g, aes(x=continent, y=lifeExp)) +
+  geom_boxplot()
+b
+
+# match color to continents, like scatterplot
+b = b +
+  aes(fill=continent)
+b
+
+# drop legend, add title, update axes labels
+b = b +
+  theme(legend.position='none') +
+  ggtitle('Life Expectancy by Continent for 2007') +
+  xlab('Continent') +
+  ylab('Life expectancy (years)')
+b
+```
+
+## Interactive 
+## Plotly
+```{r plotly}
+library(plotly) # install.packages('plotly')
+
+# scatterplot (Note: key=country shows up on rollover)
+s = ggplot(g, aes(x=gdpPercap, y=lifeExp, key=country)) +
+  geom_point()
+ggplotly(s)
+
+
+# boxplot
+#ggplotly(b)
+```
+## Exploding Boxplot
+```{r explode}
+library(explodingboxplotR) 
+# devtools::install_github('timelyportfolio/explodingboxplotR')
+
+exploding_boxplot(g,
+  y = 'lifeExp',
+  group = 'continent',
+  color = 'continent',
+  label = 'country')
+```
+## Motion Plot
+```{r motion}
+suppressPackageStartupMessages({
+  library(googleVis) # install.packages('googleVis')
+})
+op <- options(gvis.plot.tag='chart')
+
+m = gvisMotionChart(
+  gapminder %>%
+  mutate(pop_m = pop / 1e6,
+  log_gdpPercap = log(gdpPercap)), 
+  idvar='country', 
+  timevar='year', 
+  xvar='log_gdpPercap', 
+  yvar='lifeExp', 
+  colorvar='continent',
+  sizevar='pop_m')
+plot(m)
+```
+
+## MAPS
+## Static
+```{r tmaps}
+library(tmap) # install.packages('tmap')
+
+# load world spatial polygons
+data(World)
+
+# inspect values in World
+World@data %>% tbl_df()
+
+# gapminder countries not in World. skipping for now
+g %>% 
+  anti_join(World@data, by=c('country'='name')) %>% 
+  arrange(desc(pop))
+
+# World countries not in gapminder. skipping for now
+World@data %>% 
+  anti_join(g, by=c('name'='country')) %>% 
+  arrange(desc(pop_est)) %>%
+  select(iso_a3, name, pop_est)
+
+# join gapminder data to World
+World@data = World@data %>%
+  left_join(g, by=c('name'='country'))
+
+# make map
+m = tm_shape(World) +
+    tm_polygons('lifeExp', palette='RdYlGn', id='name', title='Life expectancy (years)', auto.palette.mapping=F) +
+    tm_style_gray() + tm_format_World()
+m
+```
+
+## Interactive
+```{r interactive}
+# show interactive map
+tmap_leaflet(m)
+```
+
+
